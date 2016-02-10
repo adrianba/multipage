@@ -1,0 +1,11 @@
+{
+  "name": "multipage",
+  "description": "Generate the multipage HTML specification",
+  "version": "0.0.1",
+  "author": "adrianba",
+  "private": true,
+  "dependencies": {
+    "cheerio": "^0.20.0",
+    "es6-promise": "^3.0.2"
+  }
+}
