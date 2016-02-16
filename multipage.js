@@ -137,7 +137,7 @@ for(var i=0; i<sections.length; i++) {
     if(next_toc!==null) {
     	nav += " — " + doc(next_toc).find("a").first().toString() + " →";
     }
-	nav = "<nav class='prev_next'>" + nav + "</nav>";
+	nav = "<p class='prev_next'>" + nav + "</p>";
 	var mainNav = doc("nav#toc");
 	mainNav.prepend(nav);
 	mainNav.parent().append(nav);
