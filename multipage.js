@@ -127,6 +127,15 @@ for(var i=0; i<sections.length; i++) {
 
   var header = doc("#" + id);
   var section = header.parent();
+  var stop = 10;
+  while (section.get(0).tagName !== "section" && stop > 0) {
+    section = section.parent();
+    stop--;
+    if (stop == 0) {
+      console.log("Giving up on find the parent section for #"
+                  + id + ". Please report a bug.");
+    }
+  }
 
   var inSubSection = (section.parents("section").length > 0);
 
