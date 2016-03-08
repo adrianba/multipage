@@ -49,6 +49,7 @@ var sections = [
   ,   "idl-index"
   ,   "references"
   ,   "acknowledgements"
+  ,   "changes"
 ];
 
 // console.log("Creating ID->file mapping");
