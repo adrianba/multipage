@@ -1,7 +1,7 @@
 "use strict";
 
 var fs = require('fs');
-var cheerio = require('cheerio');
+var whacko = require('whacko');
 var io = require('./io-promise');
 
 var baseOutputPath = "./out/";
@@ -15,69 +15,70 @@ if(process.argv[2] !== undefined) {
 }
 
 console.log('Loading single-page.html');
-var $ = cheerio.load(fs.readFileSync(specFile));
+var $ = whacko.load(fs.readFileSync(specFile));
 
 var sections = [
-      "introduction"
-  ,   "infrastructure"
-  ,   "dom"
-  ,   "semantics"
-  ,   "document-metadata"
-  ,   "sections"
-  ,   "grouping-content"
-  ,   "textlevel-semantics"
-  ,   "edits"
-  ,   "semantics-embedded-content"
-  ,   "links"
-  ,   "tabular-data"
-  ,   "sec-forms"
-  ,   "interactive-elements"
-  ,   "semantics-scripting"
-  ,   "common-idioms-without-dedicated-elements"
-  ,   "disabled-elements"
-  ,   "matching-html-elements-using-selectors"
-  ,   "editing"
-  ,   "browsers"
-  ,   "webappapis"
-  ,   "syntax"
-  ,   "xhtml"
-  ,   "rendering"
-  ,   "obsolete"
-  ,   "iana"
-  ,   "index"
-  ,   "property-index"
-  ,   "idl-index"
-  ,   "references"
-  ,   "acknowledgements"
-  ,   "changes"
+     { id: "introduction" }
+  ,  { id: "infrastructure" }
+  ,  { id: "dom" }
+  ,  { id: "semantics" }
+  ,  { id: "document-metadata" }
+  ,  { id: "sections" }
+  ,  { id: "grouping-content" }
+  ,  { id: "textlevel-semantics" }
+  ,  { id: "edits" }
+  ,  { id: "semantics-embedded-content" }
+  ,  { id: "links" }
+  ,  { id: "tabular-data" }
+  ,  { id: "sec-forms" }
+  ,  { id: "interactive-elements" }
+  ,  { id: "semantics-scripting" }
+  ,  { id: "common-idioms-without-dedicated-elements" }
+  ,  { id: "disabled-elements" }
+  ,  { id: "matching-html-elements-using-selectors" }
+  ,  { id: "editing" }
+  ,  { id: "browsers" }
+  ,  { id: "webappapis" }
+  ,  { id: "syntax" }
+  ,  { id: "xhtml" }
+  ,  { id: "rendering" }
+  ,  { id: "obsolete" }
+  ,  { id: "iana" }
+  ,  { id: "index" }
+  ,  { id: "property-index" }
+  ,  { id: "idl-index" }
+  ,  { id: "references" }
+  ,  { id: "changes" }
+  ,  { id: "acknowledgements" }
 ];
 
-// console.log("Creating ID->file mapping");
+console.log("Creating ID->file mapping");
 
 // first, create a mapping between the ids and their files
 var idMap = [];
 for(var i=0; i<sections.length; i++) {
-	var id = sections[i];
+  var section = sections[i];
 
-	var destfile = id;
-	if(destfile==="index") {
-		destfile = "fullindex";
-	}
+	if(section.id==="index") {
+		section.filename = "fullindex";
+	} else {
+    section.filename = section.id;
+  }
 
-	var section = $('#'+id).parents('section');
-	if(!section) throw 'section not found';
-  if (section.length > 1) {
+	var sNode = $('#'+section.id).parents('section');
+	if(!sNode) throw 'section not found';
+  if (sNode.length > 1) {
     // if we are in a subsection, just take the first
-    section = section.first();
+    sNode = sNode.first();
   }
   if (id === "semantics") {
     // we only take the first subsection for semantics
     // others will be handled by ids
-    idMap['#' + id] = destfile;
-    section = section.find("section").first();
+    idMap['#' + section.id] = section.filename;
+    sNode = sNode.find("section").first();
   }
-	section.find('*[id]').each(function(i,element) {
-		idMap['#'+$(this).attr('id')] = destfile;
+	sNode.find('*[id]').each(function(i,element) {
+		idMap['#'+$(this).attr('id')] = section.filename;
 	});
 }
 
@@ -96,14 +97,42 @@ $("a[href^='#']").each(function(i,element) {
 	}
 });
 
+// save the information to generate the proper sections
+
+console.log("Sorting out sections");
+
+var htmlTitle = $("title").first().text();
+
+for(var i=0; i<sections.length; i++) {
+  var section = sections[i];
+
+  // find the proper header
+  section.header = $("#" + section.id);
+
+  // compute the nice title
+  section.title  = htmlTitle + ": "+ section.header.text();
+
+  // find the proper section
+  section.node = section.header.parent();
+  while (section.node.get(0).tagName !== "section") {
+    section.node = section.node.parent();
+  }
+  // for section 4, only keep the first subsection
+  if (section.id === "semantics") {
+    var newSection = $('<section></section>');
+    var h2 = section.node.children().first();
+    var s = section.node.children().get(1);
+    newSection.append(h2);
+    newSection.append(s);
+    section.node = newSection;
+  }
+}
+
+// remove main
+$("nav").next().remove();
+
 console.log("Generating index");
-
-var doc = cheerio.load($.html());
-var main = doc("main").first();
-main.remove();
-
-// console.log('Saving index');
-io.save(baseOutputPath + "index.html",doc.html());
+io.save(baseOutputPath + "index.html",$.html());
 
 console.log("Generating sections");
 
@@ -121,37 +150,22 @@ do {
   current = nextElement;
 } while($(current).get(0));
 
+
+// main was removed before generating, so recreate it
+$("nav").after('<main></main>');
+
+var sectionDocument = $.html();
+
 for(var i=0; i<sections.length; i++) {
-	var id = sections[i];
+	var id = sections[i].id;
 
-	doc = cheerio.load($.html());
+	var doc = whacko.load(sectionDocument);
 
-  var header = doc("#" + id);
-  var section = header.parent();
-  var stop = 10;
-  while (section.get(0).tagName !== "section" && stop > 0) {
-    section = section.parent();
-    stop--;
-    if (stop == 0) {
-      console.log("Giving up on find the parent section for #"
-                  + id + ". Please report a bug.");
-    }
-  }
+  var header = sections[i].header;
+  var section = sections[i].node;
 
-  var inSubSection = (section.parents("section").length > 0);
-
-  // remove everything under main
-  var main = doc("main").first();
-  main.empty();
-  // reinsert the section
-  main.append(section);
-
-  // at the start of section 4, we eliminate all subsections after the first
-  if (id === "semantics") {
-    section.children("section").each(function(i,element) {
-      if (i > 0) doc(element).remove();
-    });
-  }
+  // insert the proper section
+  var main = doc("main").first().append(section);
 
   // Adjust the table of contents
 	var toc = doc("nav#toc ol").first();
@@ -160,27 +174,25 @@ for(var i=0; i<sections.length; i++) {
   // find its previous and next
   var previous_item = undefined, next_item = undefined;
   if (i > 0) {
-    previous_item = toc.find('a[href$="#' + sections[i-1] + '"]').first();
+    previous_item = toc.find('a[href$="#' + sections[i-1].id + '"]').first();
   }
   if ((i+1) < sections.length) {
-    next_item = toc.find('a[href$="#' + sections[i+1] + '"]').first();
+    next_item = toc.find('a[href$="#' + sections[i+1].id + '"]').first();
   }
 
-	// only keep the appropriate nav toc
+        // only keep the appropriate nav toc
   toc.empty();
   toc.append(item);
 
-  // again, for section 4, we eliminate alkl subtoc after the first
+  // again, for section 4, we eliminate all subtoc after the first
   if (id === "semantics") {
     item.children("ol").children("li").each(function(i,element) {
       if (i > 0) doc(element).remove();
     });
   }
 
-
   // make a nice title for the document
-	var titleElement = doc("title").first();
-	titleElement.text(titleElement.text() + ": " + header.text());
+	doc("title").first().text(sections[i].title);
 
   // insert top and botton mini navbars
   var nav = "<a href='index.html#contents'>Table of contents</a>";
@@ -195,11 +207,6 @@ for(var i=0; i<sections.length; i++) {
 	mainNav.prepend(nav);
 	mainNav.parent().append(nav);
 
-	var destfile = id;
-	if (destfile === "index") {
-		destfile = "fullindex";
-	}
-  // console.log('Saving ' + titleElement.text());
-	io.save(baseOutputPath + destfile + ".html",doc.html());
-
+  // console.log('Saving ' + sections[i].title);
+	io.save(baseOutputPath + sections[i].filename + ".html",doc.html());
 }
