@@ -1,11 +1,10 @@
 {
   "name": "multipage",
   "description": "Generate the multipage HTML specification",
-  "version": "0.0.1",
+  "version": "0.0.5",
   "author": "adrianba",
   "private": true,
   "dependencies": {
-    "whacko": "^0.19.1",
-    "es6-promise": "^3.2.1"
+    "whacko": "^0.19.1"
   }
 }

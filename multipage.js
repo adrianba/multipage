@@ -2,7 +2,6 @@
 
 var fs = require('fs');
 var whacko = require('whacko');
-var io = require('./io-promise');
 
 var baseOutputPath = "./out/";
 var specFile = 'single-page.html';
@@ -14,7 +13,10 @@ if(process.argv[2] !== undefined) {
 	specFile = process.argv[2];
 }
 
+console.log('This platform is', process.platform, 'node', process.version);
+
 console.log('Loading single-page.html');
+
 var $ = whacko.load(fs.readFileSync(specFile));
 
 var sections = [
@@ -107,13 +109,13 @@ for(var i=0; i<sections.length; i++) {
   var section = sections[i];
 
   // find the proper header
-  section.header = $("#" + section.id);
+  var header = $("#" + section.id);
 
   // compute the nice title
-  section.title  = htmlTitle + ": "+ section.header.text();
+  section.title  = htmlTitle + ": "+ header.text();
 
   // find the proper section
-  section.node = section.header.parent();
+  section.node = header.parent();
   while (section.node.get(0).tagName !== "section") {
     section.node = section.node.parent();
   }
@@ -128,13 +130,17 @@ for(var i=0; i<sections.length; i++) {
   }
 }
 
-// remove main
+console.log("Generating index");
+
+// remove main to avoid having it in the index output
 $("nav").next().remove();
 
-console.log("Generating index");
-io.save(baseOutputPath + "index.html",$.html());
+fs.writeFileSync(baseOutputPath + "index.html",$.html());
 
 console.log("Generating sections");
+
+// main was removed before generating the index, so recreate it
+$("nav").after('<main></main>');
 
 // remove unnecessary heading (Version links, editors, etc.)
 var current = $("h2#abstract").first();
@@ -150,10 +156,7 @@ do {
   current = nextElement;
 } while($(current).get(0));
 
-
-// main was removed before generating, so recreate it
-$("nav").after('<main></main>');
-
+// this will be our template for each section page
 var sectionDocument = $.html();
 
 for(var i=0; i<sections.length; i++) {
@@ -161,7 +164,6 @@ for(var i=0; i<sections.length; i++) {
 
 	var doc = whacko.load(sectionDocument);
 
-  var header = sections[i].header;
   var section = sections[i].node;
 
   // insert the proper section
@@ -207,6 +209,6 @@ for(var i=0; i<sections.length; i++) {
 	mainNav.prepend(nav);
 	mainNav.parent().append(nav);
 
-  // console.log('Saving ' + sections[i].title);
-	io.save(baseOutputPath + sections[i].filename + ".html",doc.html());
+  console.log('Saving ' + sections[i].title);
+  fs.writeFileSync(baseOutputPath + sections[i].filename + ".html",doc.html());
 }
