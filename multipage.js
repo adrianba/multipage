@@ -54,6 +54,19 @@ var sections = [
   ,  { id: "acknowledgements" }
 ];
 
+console.log("Removing unused sections");
+
+var keepsections = [];
+for(var i=0; i<sections.length; i++) {
+  var hasNode = $("#" + sections[i].id).length;
+  if (hasNode === 1) {
+    keepsections.push(sections[i]);
+  } else {
+    console.log("  Removed " + sections[i].id);
+  }
+}
+sections = keepsections;
+
 console.log("Creating ID->file mapping");
 
 // first, create a mapping between the ids and their files
