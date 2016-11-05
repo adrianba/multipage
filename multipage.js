@@ -116,7 +116,8 @@ for(var i=0; i<sections.length; i++) {
 
   // find the proper section
   section.node = header.parent();
-  while (section.node.get(0).tagName !== "section") {
+  //while (section.node.get(0).tagName !== "section") {
+  while (section.node.get(0) && section.node.get(0).tagName !== "section") {
     section.node = section.node.parent();
   }
   // for section 4, only keep the first subsection
